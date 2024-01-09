@@ -83,3 +83,35 @@ On CentOS or Fedora servers, run the following command:
 `sudo systemctl restart sshd`  
 
 
+# Create Sudo Users
+
+Steps to Create a Sudo User
+Follow the steps below to create a new user account and give it sudo access. If you want to configure sudo for an existing user, skip to step 3.
+
+- 1 - Log in to your server.
+Log in to your system as the root user:  
+`ssh root@server_ip_address`  
+
+- 2 - Create a new user account.
+Create a new user account using the adduser command. Don’t forget to replace username with the user name that you want to create:  
+`adduser username`  
+You will be prompted to set and confirm the new user password. Make sure that the password for the new account is as strong as possible.
+
+- 3 - Add the new user to the sudo group
+By default on Ubuntu systems, members of the group sudo are granted with sudo access. To add the user you created to the sudo group use the usermod command:  
+`usermod -aG sudo username`  
+Test the sudo access  
+Switch to the newly created user:  
+`su - username`  
+Use sudo to run the whoami command:  
+sudo whoami  
+If the user have sudo access then the output of the whoami command will be “root”:  
+Output:  
+root  
+
+How to use sudo  
+To use sudo, simply prefix the command with sudo and space:  
+`sudo ls -l /root`  
+
+The first time you use sudo in a session, you will be prompted to enter the user password:  
+[sudo] password for username:  
