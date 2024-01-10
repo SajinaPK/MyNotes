@@ -115,3 +115,90 @@ To use sudo, simply prefix the command with sudo and space:
 
 The first time you use sudo in a session, you will be prompted to enter the user password:  
 [sudo] password for username:  
+
+# Crash on Linux produces no core or truncated core
+
+**1. SET ULIMITS**
+
+The ulimits for core (-c) and fsize (-f) need to be tuned so that the hard and soft limits are set to unlimited. This may require root access to change.
+ 
+Global settings are set in the file `/etc/security/limits.conf`.  
+The format for setting each limit is as follows:  
+`<domain> <type> <item> <value>`  
+`<domain>` controls which users or groups will have these limits  
+`<type>` is either the string "soft" or "hard" limits.  
+The hyphen "-" can also be used which represents both soft and hard limits  
+
+Example: wasadmin    soft   core  unlimited  
+
+**2. DISK SPACE**
+
+To check all of your partitions, execute this command (the -k is for kilobytes):
+
+`df -k`  
+
+**3. Core pattern configuration**
+
+To change the Linux core pattern, modify the /proc/sys/kernel/core_pattern file with root user privileges.
+
+1. See what the core_pattern currently is:  
+    `cat /proc/sys/kernel/core_pattern`
+
+2. Save off the current core_pattern:  
+    `cat /proc/sys/kernel/core_pattern > ~/old_core_pattern`
+
+3. Set the core_pattern to core so it will write to the current working directory of the JVM.  
+    `echo "core" > /proc/sys/kernel/core_pattern`
+
+    or 
+
+    To write the core file to a specific location use:  
+    `echo "/path_to_directory/core" > /proc/sys/kernel/core_pattern`
+
+4. Verify the core_pattern has been updated:  
+    `cat /proc/sys/kernel/core_pattern`
+
+**4. DISABLE SIGNAL HANDLERS**
+
+To force the operating system to handle all signals sent to the JVM process, you can disable all JVM signal handlers.  
+`-Xrs`  
+
+**5. Other**
+
+You can simulate a crash by sending a **signal 6** or **signal 11** to the JVM process. **This will terminate the process**.  
+`kill -6 PID`  
+  or  
+`kill -11 PID`
+
+An alternative is to use the **gcore** command. This produces a core file and **keeps the process running**.
+`gcore PID`  
+
+**How can I pipe a core to a specified program to control the core generation?**` 
+To pipe to a specified program to control the core generation, use the following line. Ensure that program is configured to store core dumps and not truncate them.  
+`|/path_to_directory/program_name`
+
+This can be changed by having the Linux OS administrator edit /etc/sysctl.conf with the changes, save it, then run the command:  
+`sysctl -p`  
+
+** With either the ulimit or core_pattern changes, if there are problems, please contact your Linux OS Support. These are operating system settings, so your Linux OS Support will be able to assist you further.
+
+Here are some examples of common configuration of core dump processing programs if you cannot change the core pattern string.
+ 
+If /proc/sys/kernel/core_pattern is set to **|.../systemd-coredump**, then edit /etc/systemd/coredump.conf and update the defaults. For example, start with something like the following but change based on your available disk space. Change these values to your desired values. Disabled Compression helps reducing core dump production times.  
+ProcessSizeMax=100G  
+ExternalSizeMax=100G  
+MaxUse=500G  
+Compress=no  
+ 
+Then run:  
+`systemctl daemon-reload`
+ 
+The JVM does not need to be restarted. Test creating a core dump. By default, it will be written to /var/lib/systemd/coredump/.
+
+If /proc/sys/kernel/core_pattern is set to **|.../abrt-hook-ccpp,** then modify /etc/abrt/abrt.conf.
+ Set MaxCrashReportsSize=0 to avoid truncation, and then run: systemctl restart abrtd
+ 
+By default, cores will go to /var/spool/abrt.
+
+
+If /proc/sys/kernel/core_pattern is set to **|...dynatrace...**, then the core dump should be further sent to the underlying core dump processing program. Review what that is by checking /opt/dynatrace/oneagent/agent/conf/original_core_pattern and then apply all the same logic as above.
